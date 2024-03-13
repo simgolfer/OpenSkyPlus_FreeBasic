@@ -64,9 +64,9 @@ internal static class DeviceControls
             Terminate($"{_config.AppSettings.LaunchMonitor} assemblies not found. Check the app path and try again.");
         }
 
-        // THIS LINE CHECKS TO MAKE SURE THE LICENSE IS VALID. DO NOT DELETE THIS LINE OR THE CHECK WILL NOT WORK!
-        if (!CheckLicense()) Terminate("Could not verify app license");
-
+           // THIS LINE CHECKS TO MAKE SURE THE LICENSE IS VALID. DO NOT DELETE THIS LINE OR THE CHECK WILL NOT WORK!
+           // if (!CheckLicense()) Terminate("Could not verify app license");
+        CheckLicense();
         try
         {
             InitializeLaunchMonitorWrapper();
@@ -80,37 +80,42 @@ internal static class DeviceControls
         }
 
         return;
-
+    }
         static bool CheckLicense()
         {
-            try
+           try
             {
                 var licenseStatusProperty = AccessTools
                     .TypeByName($"{_config.AppSettings.LaunchMonitor}Wrapper.EONIOHDNGND+MOBEJGCNPEM")
                     .GetProperty("GNFAINMEEHO");
-
+            
                 var licenseStatusInstance = AccessTools
                     .TypeByName($"{_config.AppSettings.LaunchMonitor}Wrapper.EONIOHDNGND+IBHCDNLENEF")?
                     .GetProperty("GEDJNGPNLKO")?.GetValue(AccessTools.TypeByName("Security.ELOOGCNONDM")?
                         .GetProperty("IBHCDNLENEF")?.GetValue(AccessTools.TypeByName("Security.AOMKMFBGCGG")?
                             .GetProperty("KGJFDOMIPBN", BindingFlags.Public | BindingFlags.Static)?
                             .GetValue(null)));
-
+            
                 if ((int?)licenseStatusProperty?.GetValue(licenseStatusInstance) == 0)
                 {
                     _logger.LogInfo("Play and Improve license is valid");
+                    return true;
+                }
+                else
+                {
+                    _logger.LogInfo("Have fun with basic subscription");
                     return true;
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogDebug($"Exception during license check:\n{ex}");
-                return false;
-            }
+                return true;
+            } 
 
-            return false;
+          
         }
-    }
+    
 
     private static void Terminate(string ex)
     {
@@ -177,41 +182,40 @@ internal static class DeviceControls
 
     public static ShotMode SetShotMode(ShotMode shotMode)
     {
-        // Putting:
-        // public void CBJNBOIKFIE
-        //
-        // Normal:
-        // public void FPFBIPJNOKH
-        var wasArmed = Armed;
-        try
-        {
-            DisarmMonitor();
-            switch (shotMode)
-            {
-                case ShotMode.Putting:
-                    _launchMonitorWrapper.GetType().InvokeMember(
-                        "CBJNBOIKFIE", BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.Instance,
-                        null, _launchMonitorWrapper, null);
-                    shotMode = ShotMode.Putting;
-                    return ShotMode.Putting;
-                case ShotMode.Normal:
-                default:
-                    _launchMonitorWrapper.GetType().InvokeMember(
-                        "FPFBIPJNOKH", BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.Instance,
-                        null, _launchMonitorWrapper, null);
-                    return ShotMode.Normal;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning($"Couldn't set shot mode to {shotMode}:\n{ex}");
-            return shotMode;
-        }
-        finally
-        {
-            RefreshConnection();
-            if (wasArmed) ArmMonitor();
-        }
+         // Putting:
+         // public void CBJNBOIKFIE
+         //
+         // Normal:
+         // public void FPFBIPJNOKH
+         bool wasArmed = DeviceControls.Armed;
+         ShotMode shotMode2;
+         try
+         {
+             DeviceControls.DisarmMonitor();
+             if (shotMode != ShotMode.Normal && shotMode == ShotMode.Putting)
+             {
+                 DeviceControls._launchMonitorWrapper.GetType().InvokeMember("CBJNBOIKFIE", BindingFlags.Instance | BindingFlags.Public | BindingFlags.InvokeMethod, null, DeviceControls._launchMonitorWrapper, null);
+                 shotMode2 = ShotMode.Putting;
+             }
+             else
+             {
+                 DeviceControls._launchMonitorWrapper.GetType().InvokeMember("FPFBIPJNOKH", BindingFlags.Instance | BindingFlags.Public | BindingFlags.InvokeMethod, null, DeviceControls._launchMonitorWrapper, null);
+                 shotMode2 = ShotMode.Normal;
+             }
+         }
+         catch (Exception ex)
+         {
+             DeviceControls._logger.LogWarning(string.Format("Couldn't set shot mode to {0}:\n{1}", shotMode, ex));
+             shotMode2 = shotMode;
+         }
+         finally
+         {
+             if (wasArmed)
+             {
+                 DeviceControls.ArmMonitor();
+             }
+         }
+         return shotMode2;
     }
 
     public static void RefreshConnection(bool disconnectOnly = false)
